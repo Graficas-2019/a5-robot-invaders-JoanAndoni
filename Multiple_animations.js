@@ -7,7 +7,8 @@ var renderer = null,
   group = null;
 
 // VARIABLES FOR THE GAME
-var gameOn = false;
+var gameOn = false,
+  difficult = 2;
 
 // VARIABLES FOR THE ROBOT
 var robot_mixer = {};
@@ -27,6 +28,30 @@ var gameTime = 10, // 10seg
 var raycaster = new THREE.Raycaster(),
   mouse = new THREE.Vector2();
 
+// VARIBLES FOR THE POSITIONS OF THE ROBOTS
+var minX = -38,
+  maxX = 38,
+  minZ = -75,
+  maxZ = 95;
+
+
+function run() {
+  requestAnimationFrame(function() {
+    run();
+  });
+
+  // update the picking ray with the camera and mouse position
+  raycaster.setFromCamera(mouse, camera);
+
+  // Render the scene
+  renderer.render(scene, camera);
+
+  // Update the animations
+  KF.update();
+
+  // Spin the cube for next frame
+  animate();
+}
 
 function onWindowResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -36,21 +61,32 @@ function onWindowResize() {
 
 function timer() {
   contador_s = 0;
-  contador_m = 0;
   time = document.getElementById("time");
   window.setInterval(function() {
     time.innerHTML = (gameTime - contador_s).toString() + " seg";
     contador_s++;
     if (contador_s === gameTime) {
-      console.log("El tiempo ha acabado");
+      gameOn = true;
+      startGame();
     }
   }, 1000);
+}
+
+function createRobots() {
+  window.setInterval(function() {
+    if (gameOn) {
+      var newRobot = cloneFbx(robot_idle);
+      newRobot.position.set(getXPositionRandom(), 0, minZ);
+      scene.add(newRobot);
+    }
+  }, difficult * 1000);
 }
 
 function startGame() {
   if (!gameOn) {
     gameOn = true;
     timer();
+    createRobots();
     document.getElementById("start").value = "Stop";
     animation = "run";
   } else {
@@ -62,13 +98,12 @@ function startGame() {
     document.getElementById("score").innerHTML = score.toString() + " pts";
     animation = "idle";
   }
+}
 
-  // if (animation == "dead") {
-  //   createDeadAnimation();
-  // } else {
-  //   robot_idle.rotation.x = 0;
-  //   robot_idle.position.y = -4;
-  // }
+function getXPositionRandom() {
+  minX = Math.ceil(minX);
+  maxX = Math.floor(maxX);
+  return Math.floor(Math.random() * (maxX - minX + 1)) + minX;
 }
 
 function createDeadAnimation() {
@@ -80,9 +115,6 @@ function loadFBX() {
   loader.load('../Course-material/Code-samples/models/Robot/robot_idle.fbx', function(object) {
     robot_mixer["idle"] = new THREE.AnimationMixer(scene);
     object.scale.set(0.02, 0.02, 0.02);
-    object.position.x += 38;
-    object.position.y = 0;
-    object.position.z -= 75;
     object.traverse(function(child) {
       if (child.isMesh) {
         child.castShadow = true;
@@ -91,7 +123,6 @@ function loadFBX() {
     });
 
     robot_idle = object;
-    scene.add(robot_idle);
 
     createDeadAnimation();
 
@@ -100,6 +131,7 @@ function loadFBX() {
     loader.load('../Course-material/Code-samples/models/Robot/robot_run.fbx', function(object) {
       robot_mixer["run"] = new THREE.AnimationMixer(scene);
       robot_mixer["run"].clipAction(object.animations[0], robot_idle).play();
+      animation = object.animations[0];
     });
 
     loader.load('../Course-material/Code-samples/models/Robot/robot_walk.fbx', function(object) {
@@ -117,7 +149,6 @@ function animate() {
 
   if (robot_idle && robot_mixer[animation]) {
     robot_mixer[animation].update(deltat * 0.001);
-
   }
 
   if (animation == "dead") {
@@ -144,21 +175,6 @@ function onMouseDown(event) {
   } else {
     // console.log("No toco nada");
   }
-}
-
-function run() {
-  requestAnimationFrame(function() {
-    run();
-  });
-
-  // update the picking ray with the camera and mouse position
-  raycaster.setFromCamera(mouse, camera);
-
-  // Render the scene
-  renderer.render(scene, camera);
-
-  // Spin the cube for next frame
-  animate();
 }
 
 function setLightColor(light, r, g, b) {
