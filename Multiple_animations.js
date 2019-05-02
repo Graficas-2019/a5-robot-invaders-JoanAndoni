@@ -1,3 +1,4 @@
+// SCENE VARIABLES
 var renderer = null,
   scene = null,
   camera = null,
@@ -5,51 +6,69 @@ var renderer = null,
   robot_idle = null,
   group = null;
 
+// VARIABLES FOR THE GAME
+var gameOn = false;
+
+// VARIABLES FOR THE ROBOT
 var robot_mixer = {};
 var deadAnimator;
-var morphs = [];
+var animation = "idle";
 
+// VARIABLES FOR THE TIMES
 var duration = 20000; // ms
 var currentTime = Date.now();
 
-var time = 0,
+// VARIABLES FOR THE GAME TIME
+var gameTime = 10, // 10seg
+  time = 0,
   score = 0;
 
-var animation = "idle";
+// VARIABLES FOR THE RAYCAST
+var raycaster = new THREE.Raycaster(),
+  mouse = new THREE.Vector2();
 
-var endDate = new Date("May 15, 2019 12:00:00").getTime();
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function timer() {
+  contador_s = 0;
+  contador_m = 0;
+  time = document.getElementById("time");
+  window.setInterval(function() {
+    time.innerHTML = (gameTime - contador_s).toString() + " seg";
+    contador_s++;
+    if (contador_s === gameTime) {
+      console.log("El tiempo ha acabado");
+    }
+  }, 1000);
+}
 
 function startGame() {
-  if (document.getElementById("start").value === "Start") {
+  if (!gameOn) {
+    gameOn = true;
+    timer();
     document.getElementById("start").value = "Stop";
-    score = 0;
-    var timer = setInterval(function() {
-      let now = newDate().getTime();
-      let t = endDate - now;
-      if (t >= 0) {
-        let secs = Math.floor((t % (1000 * 60)) / 1000);
-        document.getElementById("time").innerHTML = ("0" + secs).slice(-2) +
-          " seg";
-      } else {
-        document.getElementById("time").innerHTML = "The game is over";
-      }
-    }, 1000);
-    document.getElementById("score").innerHTML = score.toString() + " pts";
     animation = "run";
   } else {
-    document.getElementById("start").value = "Start";
+    gameOn = false;
     time = 60;
-    document.getElementById("time").innerHTML = pad(remainingSeconds) + " seg";
+    score = 0;
+    document.getElementById("start").value = "Start";
+    document.getElementById("time").innerHTML = time.toString() + " seg";
     document.getElementById("score").innerHTML = score.toString() + " pts";
     animation = "idle";
   }
 
-  if (animation == "dead") {
-    createDeadAnimation();
-  } else {
-    robot_idle.rotation.x = 0;
-    robot_idle.position.y = -4;
-  }
+  // if (animation == "dead") {
+  //   createDeadAnimation();
+  // } else {
+  //   robot_idle.rotation.x = 0;
+  //   robot_idle.position.y = -4;
+  // }
 }
 
 function createDeadAnimation() {
@@ -61,9 +80,9 @@ function loadFBX() {
   loader.load('../Course-material/Code-samples/models/Robot/robot_idle.fbx', function(object) {
     robot_mixer["idle"] = new THREE.AnimationMixer(scene);
     object.scale.set(0.02, 0.02, 0.02);
-    object.position.x -= 0;
-    object.position.y -= 4;
-    object.position.z -= 30;
+    object.position.x += 38;
+    object.position.y = 0;
+    object.position.z -= 75;
     object.traverse(function(child) {
       if (child.isMesh) {
         child.castShadow = true;
@@ -106,10 +125,34 @@ function animate() {
   }
 }
 
+function onMouseDown(event) {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+
+  var intersects = raycaster.intersectObjects(scene.children, true);
+
+  if (intersects.length > 1) {
+    if (gameOn) {
+      // console.log("Toco al objeto +1 punto");
+      score++;
+      document.getElementById("score").innerHTML = score.toString() + " pts";
+    } else {
+      // console.log("Toco al objeto pero no ha comenzado el juego");
+    }
+  } else {
+    // console.log("No toco nada");
+  }
+}
+
 function run() {
   requestAnimationFrame(function() {
     run();
   });
+
+  // update the picking ray with the camera and mouse position
+  raycaster.setFromCamera(mouse, camera);
 
   // Render the scene
   renderer.render(scene, camera);
@@ -143,7 +186,7 @@ function createScene(canvas) {
   });
 
   // Set the viewport size
-  renderer.setSize(canvas.width, canvas.height);
+  renderer.setSize(window.innerWidth, window.innerHeight);
 
   // Turn on shadows
   renderer.shadowMap.enabled = true;
@@ -155,16 +198,15 @@ function createScene(canvas) {
 
   // Add  a camera so we can view the scene
   camera = new THREE.PerspectiveCamera(45, canvas.width / canvas.height, 1, 4000);
-  camera.position.set(0, 10, 75);
+  camera.position.set(0, 50, 151);
+  camera.rotation.set(-44.4, 0, 0);
   scene.add(camera);
-
-  // orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
 
   // Create a group to hold all the objects
   root = new THREE.Object3D;
 
   spotLight = new THREE.SpotLight(0xffffff);
-  spotLight.position.set(-30, 8, -10);
+  spotLight.position.set(0, 80, 110);
   spotLight.target.position.set(-2, 0, -2);
   root.add(spotLight);
 
@@ -209,10 +251,10 @@ function createScene(canvas) {
   group.add(mesh);
   mesh.castShadow = false;
   mesh.receiveShadow = true;
-
-  // var axesHelper = new THREE.AxesHelper(20);
-  // scene.add(axesHelper);
+  raycaster = new THREE.Raycaster();
 
   // Now add the group to our scene
   scene.add(root);
+
+  window.addEventListener('mousedown', onMouseDown);
 }
