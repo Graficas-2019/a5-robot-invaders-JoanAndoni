@@ -1,0 +1,72 @@
+<html>
+
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Robot invaders</title>
+
+    <link rel="stylesheet" href="../Course-material/Code-samples/libs/jquery-ui/jquery-ui.css" />
+    <link rel="stylesheet" href="../Course-material/Code-samples/libs/colorpicker/css/colorpicker.css" />
+    <link rel="stylesheet" href="css/main.css" />
+
+    <script src="../Course-material/Code-samples/libs/jquery-3.3.1/jquery-3.3.1.js"></script>
+    <script src="../Course-material/Code-samples/libs/jquery-ui/jquery-ui.js"></script>
+
+    <script src="../Course-material/Code-samples/libs/three.js/three.js"></script>
+    <script src="../Course-material/Code-samples/libs/three.js/controls/OrbitControls.js"></script>
+    <script src="../Course-material/Code-samples/libs/colorpicker/js/colorpicker.js"></script>
+
+    <script src="../Course-material/Code-samples/libs/three.js/loaders/GLTFLoader.js"></script>
+
+    <script src="../Course-material/Code-samples/libs/three.js/loaders/inflate.min.js"></script>
+    <script src="../Course-material/Code-samples/libs/three.js/loaders/FBXLoader.js"></script>
+
+    <script src="../Course-material/Code-samples/libs/keyframe.js/keyframe.js"></script>
+
+    <script src="Multiple_animations.js"></script>
+
+    <script type="text/javascript">
+      function initControls() {
+        $("input[name=start]").click(
+          function() {
+            startGame();
+          }
+        );
+      }
+    </script>
+
+    <script type="text/javascript">
+      $(document).ready(
+        function() {
+
+          var canvas = document.getElementById("webglcanvas");
+
+          // create the scene
+          createScene(canvas);
+
+          // initialize the controls
+          initControls();
+
+          // Run the run loop
+          run();
+        }
+      );
+    </script>
+
+  </head>
+
+  <body>
+
+    <div id="container">
+      <canvas id="webglcanvas" width=800 height=600></canvas>
+      <div id="title">Robot Invaders</div>
+      <div id="time">60 seg</div>
+      <div id="score">70 pts</div>
+    </div>
+
+    <form>
+      <input type="button" name="start" value="Start" id="start">
+    </form>
+
+  </body>
+
+</html>
