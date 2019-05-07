@@ -10,19 +10,26 @@ var renderer = null,
 var gameOn = false,
   difficult = 2;
 
-// VARIABLES FOR THE ROBOT
-var robot_mixer = {};
-var deadAnimator;
-var animation = "idle";
+// VARIABLES FOR THE ROBOTS
+var robots_mixers = [],
+  robots = [],
+  robot_mixer = {},
+  animations = [],
+  robotNames = 1,
+  animation = "idle";
 
 // VARIABLES FOR THE TIMES
-var duration = 20000; // ms
-var currentTime = Date.now();
+var duration = 20000, // ms
+  currentTime = Date.now(),
+  intervalCreateRobots = null,
+  intervalTimer = null;
 
 // VARIABLES FOR THE GAME TIME
-var gameTime = 10, // 10seg
+var gameTime = 40, // 40 seg
   time = 0,
-  score = 0;
+  score = 0,
+  walkingRobotAnimation = 0.004,
+  walkingRobotTranslation = 0.055;
 
 // VARIABLES FOR THE RAYCAST
 var raycaster = new THREE.Raycaster(),
@@ -32,73 +39,8 @@ var raycaster = new THREE.Raycaster(),
 var minX = -38,
   maxX = 38,
   minZ = -75,
-  maxZ = 95;
+  maxZ = 105;
 
-
-function run() {
-  requestAnimationFrame(function() {
-    run();
-  });
-
-  // update the picking ray with the camera and mouse position
-  raycaster.setFromCamera(mouse, camera);
-
-  // Render the scene
-  renderer.render(scene, camera);
-
-  // Update the animations
-  KF.update();
-
-  // Spin the cube for next frame
-  animate();
-}
-
-function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
-function timer() {
-  contador_s = 0;
-  time = document.getElementById("time");
-  window.setInterval(function() {
-    time.innerHTML = (gameTime - contador_s).toString() + " seg";
-    contador_s++;
-    if (contador_s === gameTime) {
-      gameOn = true;
-      startGame();
-    }
-  }, 1000);
-}
-
-function createRobots() {
-  window.setInterval(function() {
-    if (gameOn) {
-      var newRobot = cloneFbx(robot_idle);
-      newRobot.position.set(getXPositionRandom(), 0, minZ);
-      scene.add(newRobot);
-    }
-  }, difficult * 1000);
-}
-
-function startGame() {
-  if (!gameOn) {
-    gameOn = true;
-    timer();
-    createRobots();
-    document.getElementById("start").value = "Stop";
-    animation = "run";
-  } else {
-    gameOn = false;
-    time = 60;
-    score = 0;
-    document.getElementById("start").value = "Start";
-    document.getElementById("time").innerHTML = time.toString() + " seg";
-    document.getElementById("score").innerHTML = score.toString() + " pts";
-    animation = "idle";
-  }
-}
 
 function getXPositionRandom() {
   minX = Math.ceil(minX);
@@ -107,6 +49,7 @@ function getXPositionRandom() {
 }
 
 function createDeadAnimation() {
+
 
 }
 
@@ -127,28 +70,93 @@ function loadFBX() {
     createDeadAnimation();
 
     robot_mixer["idle"].clipAction(object.animations[0], robot_idle).play();
+    object.animations[0].name = "idle";
+    animations.push(object.animations[0]);
 
     loader.load('../Course-material/Code-samples/models/Robot/robot_run.fbx', function(object) {
       robot_mixer["run"] = new THREE.AnimationMixer(scene);
       robot_mixer["run"].clipAction(object.animations[0], robot_idle).play();
-      animation = object.animations[0];
+      object.animations[0].name = "run";
+      animations.push(object.animations[0]);
     });
 
     loader.load('../Course-material/Code-samples/models/Robot/robot_walk.fbx', function(object) {
       robot_mixer["walk"] = new THREE.AnimationMixer(scene);
       robot_mixer["walk"].clipAction(object.animations[0], robot_idle).play();
+      object.animations[0].name = "walk";
+      animations.push(object.animations[0]);
     });
   });
 }
 
-function animate() {
+function timer() {
+  contador_s = 0;
+  time = document.getElementById("time");
+  intervalTimer = window.setInterval(function() {
+    time.innerHTML = (gameTime - contador_s).toString() + " seg";
+    contador_s++;
+    if (contador_s === gameTime) {
+      gameOn = true;
+      startGame();
+    }
+  }, 1000);
+}
 
+function startGame() {
+  if (!gameOn) {
+    gameOn = true;
+    score = 0;
+    document.getElementById("score").innerHTML = score.toString() + " pts";
+    timer();
+    createRobots();
+    document.getElementById("start").value = "Stop";
+  } else {
+    clearAllRobots();
+    window.clearInterval(intervalTimer);
+    window.clearInterval(intervalCreateRobots);
+    gameOn = false;
+    time = 60;
+    document.getElementById("start").value = "Start";
+    document.getElementById("time").innerHTML = time.toString() + " seg";
+  }
+}
+
+function animate() {
   var now = Date.now();
   var deltat = now - currentTime;
   currentTime = now;
 
-  if (robot_idle && robot_mixer[animation]) {
-    robot_mixer[animation].update(deltat * 0.001);
+  if (robots.length === 0 && gameOn) {
+    // EL JUEGO HA COMENZADO
+  }
+
+  if (robots.length > 0 && gameOn) {
+    // EL JUEGO ESTA CORRIENDO
+    robots_mixers.forEach((mixer, index) => {
+      mixer.update(deltat * walkingRobotAnimation);
+      robots[index].position.z += deltat * walkingRobotTranslation;
+      if (robots[index].position.z >= maxZ) {
+        scene.remove(robots[index]);
+        robots.splice(index, 1);
+        robots_mixers.splice(index, 1);
+        // console.log("Te metierón un punto");
+        score -= 1;
+        document.getElementById("score").innerHTML = score.toString() + " pts";
+      }
+      if (robots[index].name === "eliminado") {
+        scene.remove(robots[index]);
+        robots.splice(index, 1);
+        robots_mixers.splice(index, 1);
+      }
+    })
+  }
+
+  if (robots.length === 0 && !gameOn) {
+    // NO HAY ROBOTS CUANDO NO HAY JUEGO
+  }
+
+  if (robots.length > 0 && !gameOn) {
+    // clearAllRobots();
   }
 
   if (animation == "dead") {
@@ -156,17 +164,49 @@ function animate() {
   }
 }
 
+function createRobots() {
+  intervalCreateRobots = window.setInterval(function() {
+    if (gameOn) {
+      var newRobot = cloneFbx(robot_idle);
+      newRobot.position.set(getXPositionRandom(), 0, minZ);
+      newRobot.name = robotNames.toString();
+
+      var mixer = new THREE.AnimationMixer(newRobot);
+      mixer.clipAction(animations[1]).play();
+
+      scene.add(newRobot);
+
+      robots.push(newRobot);
+      // console.log(robots);
+      robots_mixers.push(mixer);
+      // console.log(robots_mixers);
+
+      robotNames += 1;
+    }
+  }, difficult * 1000);
+}
+
+function clearAllRobots() {
+  robots.forEach((robot) => {
+    scene.remove(robot);
+  });
+  robots = [];
+  robots_mixers = [];
+  robotNames = 1;
+}
+
 function onMouseDown(event) {
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
+  // Update the picking ray with the camera and mouse position
   raycaster.setFromCamera(mouse, camera);
 
   var intersects = raycaster.intersectObjects(scene.children, true);
 
   if (intersects.length > 1) {
     if (gameOn) {
-      // console.log("Toco al objeto +1 punto");
+      intersects[0].object.parent.name = "eliminado";
       score++;
       document.getElementById("score").innerHTML = score.toString() + " pts";
     } else {
@@ -174,6 +214,26 @@ function onMouseDown(event) {
     }
   } else {
     // console.log("No toco nada");
+  }
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function run() {
+  requestAnimationFrame(function() {
+    run();
+  });
+
+  // Render the scene
+  renderer.render(scene, camera);
+
+  // If the game is on
+  if (gameOn) {
+    animate();
   }
 }
 
@@ -188,7 +248,7 @@ function setLightColor(light, r, g, b) {
 var directionalLight = null;
 var spotLight = null;
 var ambientLight = null;
-var mapUrl = "../Course-material/Code-samples/images/checker_large.gif";
+var mapUrl = "./images/checker_large.gif";
 
 var SHADOW_MAP_WIDTH = 2048,
   SHADOW_MAP_HEIGHT = 2048;
