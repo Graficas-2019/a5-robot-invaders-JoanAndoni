@@ -115,7 +115,7 @@ function startGame() {
     window.clearInterval(intervalTimer);
     window.clearInterval(intervalCreateRobots);
     gameOn = false;
-    time = 60;
+    time = 40;
     document.getElementById("start").value = "Start";
     document.getElementById("time").innerHTML = time.toString() + " seg";
   }
